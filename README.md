@@ -67,27 +67,62 @@ Stable module IDs allow content to be reused independently of a course's arrange
 
 Limitations: sample content only, one multiple-choice exercise, no progress tracking or syncing, no real video playback, no rich Markdown/HTML editor, and no continuous textbook export. Topic-title search is intentionally simple. Large courses could later use virtualized maps and lazy-loaded content without changing the underlying identity model.
 
-## Experimental Explore mode
+## Visualization laboratory: seven perspectives
 
-Switch between **Browse** and **Explore** in the header, or select **Explore connections** in the sidebar. On first entry, Explore starts from the current topic (Electric Field from the overview). It initially reveals only the selected topic and its immediate conceptual and hierarchy neighbours. Three suggested threads offer entry points into charges and energy, currents and magnetism, and heat and work.
+Open **Explore** in the header or **Explore connections** in the sidebar. This is an experiment, not a claim that 3D is better. Every perspective uses the same course IDs, resources, hierarchy edges, conceptual links, selected concept, revealed set, and navigation history.
 
-Selecting a card reveals that concept's immediate neighbours while retaining everything already discovered. The information panel explains each conceptual link in first-year language and offers a keyboard-accessible list of connections. Solid purple lines represent conceptual relationships; dashed grey lines show the existing hierarchy. Turn off hierarchy lines to concentrate on physical connections. Select a line to inspect its description; the same descriptions are accessible through the panel.
+Use the selector or quick-switch buttons to compare:
 
-**Reveal another layer** adds neighbours of the currently revealed network. **Focus & collapse** removes unrelated cards from view without discarding their remembered positions. **Back** revisits the previous concept; **Reset** returns to a small Electric Field network. Starting a suggested thread also resets the network. The zoom controls, fit button, and center button help manage larger maps. Drag or touch-drag empty map space to pan; scroll to zoom around the pointer. Focus the map and use arrow keys to pan. Tab to concept cards or panel links and press Enter to follow a relationship. Reveal animations respect reduced-motion preferences.
+| Layout | Approach | Question to investigate |
+|---|---|---|
+| 2D Force-Directed | D3 link attraction, charge repulsion and collision avoidance; draggable cards | Does the conceptual network suggest useful structure beyond the syllabus? |
+| 2D Radial | Selected topic at the centre, breadth-first distance rings, curved links, pill-shaped cards | Does organizing around one idea make its neighbourhood clearer? |
+| 2D Hierarchical / Layered | Curriculum depth columns, course-order rows, curved cross-links | Does a formal scaffold make cross-branch connections easier to follow? |
+| 2D Clustered | Labelled subject islands and links between them | Which concepts bridge subject communities? |
+| 3D Force-Directed | D3 springs and repulsion in three dimensions; lit spheres and floating labels | Does rotating a volume reveal connections hidden by flat overlap? |
+| 3D Radial / Orbital | Central topic and Fibonacci-distributed graph-distance shells | Do spatial neighbourhoods improve understanding or add navigation effort? |
+| 3D Clustered | Subject regions in a volume, faceted nodes, group focus | Does spatial separation help distinguish communities and their bridges? |
 
-The map retains its selection, revealed cards, positions, camera, and history when switching modes or opening a topic page. Search still opens ordinary topic pages; returning to Explore resumes the graph. This exploration state lasts for the current page session, not across a reload. Resources beneath the graph use exactly the same cards, bookmarks, dialogs, practice UI, and MathJax renderer as Browse. There is no separate graph content store.
+Each layout has an explanatory panel with its intended emphasis, explicitly presented as a hypothesis. Optional observations are saved separately per layout in this browser's local storage. There are no accounts or remote notes.
 
-### Graph architecture and design
+### Shared exploration
 
-- `src/data/course.js`: the original, unchanged course hierarchy and stable IDs.
-- `src/data/relationships.js`: manually authored undirected conceptual links, each with a stable ID, source, target, and optional plain-text description. This includes cross-domain links such as current → magnetic fields, and conservation of energy → first law. No name matching is used.
-- `src/graph/model.js`: pure graph construction, reference validation, neighbour queries, and incremental layout. Parent-child edges are derived from the hierarchy. Unknown endpoints, duplicate conceptual links, and self-links fail validation.
-- `src/graph/state.js`: pure interaction reducer for progressive reveal, selection, history, collapse, and reset.
-- `src/graph/ConceptGraph.jsx`: SVG connections, native HTML concept buttons, camera controls, and the information panel. No visualization-library dependency is required.
-- `src/graph/graph.css`: responsive graph styling and reveal animation.
+On first entry, Explore starts from the current topic, or Electric Field from the overview. **Focused mode** shows the selected concept and its immediate conceptual and hierarchy neighbours. Clicking another concept retains prior discoveries and reveals its neighbours. **Reveal another layer** expands the currently revealed network. **Focus & collapse** returns to a local neighbourhood; **Back** revisits the previous concept. **Overview mode** displays the entire course. **Reset** returns to a small Electric Field network in the current layout. Suggested threads reset around electricity, magnetism, or thermodynamics.
 
-Stable slots on expanding rings deliberately trade force-layout compactness for predictability: revealing a card never moves previously placed cards. Selection recenters the camera rather than moving the underlying network. The map emphasizes the selected concept's edges and mutes unrelated cards. A text panel explains *why* connections matter, so exploration is more than following unlabeled lines. Small screens prioritize the selected card and readable panel; pan to nearby cards or follow the panel links. Fit can shrink a large network to an overview, and center restores the selected concept to readable size. Straight edges can cross in larger networks; focus/collapse and the hierarchy toggle reduce this prototype's clutter.
+The graph search searches all course topic titles, including unrevealed topics. Selecting a result reveals its neighbourhood without navigating away from the graph. The original header search still opens ordinary topic pages.
 
-Future relationship types could add a typed vocabulary (such as “applies to”, “energy transfer”, or “mathematical tool”), directionality, and filters while retaining stable endpoints. An instructor editor could validate these same records before saving them. Module references could live on existing topic/resource IDs. A new layout can replace `placeNodes` without changing authored course content or exploration actions. A future 3D renderer could consume the same nodes and edges and supply its own spatial positions; the present implementation remains strictly 2D. No backend, editing interface, 3D engine, or Fieldnotes integration is introduced.
+Solid purple edges are conceptual connections; dashed grey edges represent the hierarchy. Either type can be hidden independently. Layout geometry uses the complete shared graph; hiding edges changes their display, not the underlying physics or layout. Selecting a connection displays its optional explanation. The information panel also exposes conceptual descriptions and course-structure links as ordinary keyboard-accessible buttons.
 
-Graph tests additionally cover valid endpoints, derived edges, the representative conceptual paths, progressive expansion, stable nonoverlapping slots for the entire course, collapse/reset/history, graph-to-topic round trips, shared MathJax resources, cross-domain navigation, keyboard controls, mobile layout, and the existing Browse regression suite.
+**Open topic page** uses the existing browser. Returning to Explore retains layout, selection, revealed concepts, history, and observation notes. Resource cards below the map reuse the original cards, bookmarks, practice UI, dialogs, and MathJax renderer; there is no duplicate resource implementation. Exploration state is kept for the page session, while bookmarks and notes persist across reloads.
+
+### Controls and accessibility
+
+- **2D:** drag empty space to pan; scroll to zoom around the pointer. Force-network cards can be dragged. Focus the map and use arrow keys to pan. Tab to cards or panel links and press Enter to select.
+- **3D:** drag to orbit, right-drag to pan, and scroll to zoom. On touchscreens, one finger rotates and two fingers pan/zoom. Focus the map and use arrow keys to orbit, `+` / `-` to zoom. Node labels are native buttons; the panel provides a textual alternative to camera navigation.
+- **Both:** zoom buttons, fit-network, and center-selected controls are available. Cluster layouts also offer a subject-group focus selector. The overview intentionally compresses the whole graph; center or group focus restores a readable local scale.
+- Layout reveal effects and the bounded orbital transition respect reduced-motion preferences. Force simulations settle before display; the visualization never continuously spins or jitters.
+- WebGL initialization/context-loss failures show a 2D fallback action without discarding the exploration. Browse and all four 2D layouts work without WebGL.
+
+### Architecture
+
+1. `src/data/course.js` remains the source of topic identities and curriculum hierarchy.
+2. `src/data/relationships.js` retains manually authored conceptual links with optional descriptions. No word matching or decorative edges are generated.
+3. `src/graph/model.js` constructs the shared graph, validates references, and provides neighbours and descriptions. Parent-child edges are derived from the existing hierarchy. Its original fixed-slot helper remains for exploration-state compatibility.
+4. `src/graph/state.js` is the shared pure reducer for selection, progressive reveal, overview, collapse, history, and reset. No renderer owns a copy of the course.
+5. `src/graph/layouts.js` supplies the layout registry, breadth-first distances, subject grouping and coordinate algorithms. Each algorithm returns plain `{id: {x, y, z}}` positions. D3 operates on temporary node/link copies, leaving course content untouched. Previously settled force positions are retained as anchors when adding nodes, reducing disruption.
+6. `src/graph/Graph2D.jsx` provides SVG edges, HTML cards, pan/zoom and force-card dragging. `Graph3D.jsx` uses Three.js, OrbitControls and CSS2D labels. It is dynamically imported only when selecting a 3D view; Browse and 2D do not load Three.js.
+7. `src/graph/ConceptGraph.jsx` coordinates layout selection, shared controls, comparison notes, topic information and existing resource cards.
+
+3D uses a capped pixel ratio, modest meshes, demand-driven drawing, explicit geometry/material disposal and context cleanup. It renders after camera changes, resizing, selection, or the short orbital transition, then stops. Labels retain a constant screen size and use small screen-space offsets to reduce overlap, prioritizing the selected concept and neighbours. Switching between 3D layouts reuses the renderer; leaving 3D disposes it. Returning from a topic page retains the active renderer and camera, without drawing while idle.
+
+Subject groups derive from current hierarchy paths: electricity's three branches, magnetism, thermodynamics, and the course root. This grouping is presentation metadata, not a second hierarchy or a new set of conceptual relationships. A future community-detection layout could replace the grouping function.
+
+### Tradeoffs and extension points
+
+Whole-course views can still have crossing edges and overlapping projected labels, especially when several concepts align along a camera direction. Orbit, focus, edge filters, panel links and search provide ways to inspect those cases. Layered overview can become tall; clustered views intentionally use more space. Force expansions anchor prior positions, so incremental layouts can differ from a freshly computed whole-course network. Dragged 2D positions and viewport adjustments are temporary renderer state; changing between dimensions can refit the camera. The prototype does not store exploration paths across reloads.
+
+Add another style by registering its name, dimension, hypothesis and algorithm in `layouts.js`; reuse the shared state and renderer where possible. A new renderer can consume the same node IDs, typed edges and plain coordinates. More sophisticated relationship types can extend the edge vocabulary and add direction/filter semantics. Instructor editing can validate the same endpoint IDs before saving. Links to learning modules already use stable topic/resource IDs. None of these possibilities requires a backend for this prototype, and no Fieldnotes dependency or modification is involved.
+
+### Laboratory validation
+
+`npm test` checks shared data integrity, representative relationship paths, graph construction, progressive state, overview/focus, deterministic force placement, stable expansion anchors, hierarchy-derived groups and all seven coordinate sets. `npm run test:e2e` preserves the existing browser regression suite and adds all seven rendered modes, layout-switch state preservation, overview/focus, node dragging, edge filters, graph search, local observations, shared MathJax resources, topic round trips, mobile/keyboard interaction, simulated WebGL failure, lazy 3D loading and idle GPU rendering.

@@ -1,10 +1,12 @@
+import {graph} from './model.js';
 import {focusedIds,placeNodes,neighbours} from './model.js';
 export function initialExploration(id='electric-field'){
- const visible=focusedIds(id);return {selected:id,visible,positions:placeNodes(visible),history:[id]};
+ const visible=focusedIds(id);return {scope:'focused',selected:id,visible,positions:placeNodes(visible),history:[id]};
 }
 export function explorationReducer(state,action){
  if(action.type==='reset')return initialExploration(action.id||'electric-field');
- if(action.type==='focus'){const visible=focusedIds(state.selected);return {...state,visible};}
+ if(action.type==='overview'){const visible=Object.keys(graph.nodes);return {...state,scope:'overview',visible,positions:placeNodes(visible,state.positions)};}
+ if(action.type==='focus'){const visible=focusedIds(state.selected);return {...state,scope:'focused',visible};}
  if(action.type==='expand'){const visible=[...new Set([...state.visible,...state.visible.flatMap(id=>neighbours(id).map(n=>n.id))])];return {...state,visible,positions:placeNodes(visible,state.positions)};}
  if(action.type==='select'){
   const visible=[...new Set([...state.visible,...focusedIds(action.id)])];
