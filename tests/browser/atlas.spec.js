@@ -1,0 +1,35 @@
+import {test,expect} from '@playwright/test';
+test('Explore, typeset equations, practice, save, filter and restore',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');await expect(page.getByRole('heading',{name:'Small ideas. A bigger picture.'})).toBeVisible();
+ await page.getByRole('button',{name:'Start exploring'}).click();
+ await expect(page.getByRole('heading',{name:'Electric Fields and Forces',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/02 Coulomb’s Law/}).click();
+ await page.getByRole('button',{name:/Written explanation The force between/}).click();
+ await expect(page.locator('dialog mjx-container').first()).toBeVisible({timeout:20000});
+ await expect(page.locator('dialog mjx-container[display="true"]')).toHaveCount(1);
+ await page.getByRole('button',{name:'Close resource'}).click();
+ await page.getByRole('button',{name:'Save The force between two charges',exact:true}).click();
+ await page.getByRole('button',{name:'Practice',exact:true}).click();
+ await expect(page.locator('.resource-card')).toHaveCount(1);
+ await page.getByRole('button',{name:/Practice question Check your intuition/}).click();
+ await page.getByRole('button',{name:/A It doubles/}).click();await expect(page.getByRole('status')).toContainText('Not quite');
+ await page.getByRole('button',{name:/C It becomes one quarter/}).click();await expect(page.getByRole('status')).toContainText('Exactly right');
+ await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);
+ await page.getByRole('button',{name:/Saved resources/}).click();await expect(page.locator('.resource-card')).toHaveCount(1);
+ await page.reload();await page.getByRole('button',{name:/Saved resources/}).click();await expect(page.locator('.resource-card')).toHaveCount(1);
+ await page.getByRole('textbox',{name:'Search concepts'}).fill('dielectrics');await page.getByRole('region',{name:'Search results'}).getByRole('button').click();
+ await expect(page.getByRole('heading',{name:'Dielectrics',exact:true})).toBeVisible();await expect(page.getByText('This idea has a place.')).toBeVisible();
+ await expect(page.locator('.breadcrumbs')).toContainText('Capacitors');
+ await page.screenshot({path:'/tmp/atlas-topic.png',fullPage:true});
+ expect(errors).toEqual([]);
+});
+test('mobile navigation and home layout',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await page.goto('/');
+ await page.screenshot({path:'/tmp/atlas-mobile.png',fullPage:true});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.getByRole('button',{name:'Open navigation'}).click();await page.getByRole('button',{name:'Expand Ideal Gases and Thermodynamics'}).click();await page.getByRole('button',{name:'Ideal Gas Law',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Ideal Gas Law',exact:true})).toBeVisible();
+ await expect(page.locator('.sidebar')).not.toHaveClass(/mobile-open/);
+});
+test('desktop overview',async({page})=>{await page.setViewportSize({width:1440,height:1000});await page.goto('/');await page.screenshot({path:'/tmp/atlas-desktop.png',fullPage:true});await expect(page.locator('.domain-card')).toHaveCount(3)});
