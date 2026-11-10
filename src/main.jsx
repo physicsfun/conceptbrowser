@@ -13,6 +13,7 @@ import '@fontsource/manrope/600.css';
 import '@fontsource/manrope/700.css';
 import './style.css';
 import ConceptGraph from './graph/ConceptGraph';
+import './typography.css';
 const icons={video:Play,explanation:FileText,example:PenLine,practice:Check,link:ExternalLink};
 const domainIcons={electricity:Zap,magnetism:Magnet,thermodynamics:Thermometer};
 const countResources=node=>[node,...descendants(node)].reduce((sum,n)=>sum+(resources[n.id]?.length||0),0);

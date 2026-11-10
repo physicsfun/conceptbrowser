@@ -99,7 +99,7 @@ Solid purple edges are conceptual connections; dashed grey edges represent the h
 
 - **2D:** drag empty space to pan; scroll to zoom around the pointer. Force-network cards can be dragged. Focus the map and use arrow keys to pan. Tab to cards or panel links and press Enter to select.
 - **3D:** drag to orbit, right-drag to pan, and scroll to zoom. On touchscreens, one finger rotates and two fingers pan/zoom. Focus the map and use arrow keys to orbit, `+` / `-` to zoom. Node labels are native buttons; the panel provides a textual alternative to camera navigation.
-- **Both:** zoom buttons, fit-network, and center-selected controls are available. Cluster layouts also offer a subject-group focus selector. The overview intentionally compresses the whole graph; center or group focus restores a readable local scale.
+- **Both:** zoom buttons, fit-network, and center-selected controls are available. Cluster layouts also offer a subject-group focus selector. At overview scale, screen-sized concept chips and selectable markers keep text readable rather than shrinking labels with the camera; center or group focus restores the full cards. Hover or keyboard-focus a marker to read its full label.
 - Layout reveal effects and the bounded orbital transition respect reduced-motion preferences. Force simulations settle before display; the visualization never continuously spins or jitters.
 - WebGL initialization/context-loss failures show a 2D fallback action without discarding the exploration. Browse and all four 2D layouts work without WebGL.
 
@@ -126,3 +126,13 @@ Add another style by registering its name, dimension, hypothesis and algorithm i
 ### Laboratory validation
 
 `npm test` checks shared data integrity, representative relationship paths, graph construction, progressive state, overview/focus, deterministic force placement, stable expansion anchors, hierarchy-derived groups and all seven coordinate sets. `npm run test:e2e` preserves the existing browser regression suite and adds all seven rendered modes, layout-switch state preservation, overview/focus, node dragging, edge filters, graph search, local observations, shared MathJax resources, topic round trips, mobile/keyboard interaction, simulated WebGL failure, lazy 3D loading and idle GPU rendering.
+
+## Readability and fullscreen
+
+`src/typography.css` defines the shared `--type-*` scale: body copy is 16–17 px at standard browser settings, navigation is 15 px, controls 14–16 px, and secondary labels 12–14 px. It retains DM Sans, Manrope, the existing palette and the landing heading. The sidebar is slightly wider, longer topic names wrap, and responsive layouts give text room rather than shrinking it on phones. Reading descriptions use a stronger muted shade from the existing colour family.
+
+The 2D graph renderer now switches to compact, screen-sized labels below normal reading zoom. Selected and neighbouring concepts get priority for label space; other concepts remain visible, selectable markers with full labels on hover or keyboard focus. Label chips are separated in screen space and linked to their original anchors when offset. This is presentation only: `labelPlacement.js` does not change topic positions, graph algorithms, connections, or selection behaviour. 3D labels also use larger, fixed screen sizes.
+
+Choose **Fullscreen** in the graph toolbar to devote the display to the map. The compact fullscreen toolbar offers visualization selection, reset, fit, reveal another layer and exit. It retains the selected concept, revealed network and current layout; switching between all seven layouts remains available. Exit with the toolbar button or the browser's Escape shortcut. Browsers without the Fullscreen API (or that deny it) use an in-window fullscreen layout with the same controls and Escape support. Keyboard focus stays within fullscreen and returns to its opener on exit. The normal topic panel and resources return when leaving fullscreen.
+
+Readability checks cover 1440, 1024, 768 and 390 px viewports, minimum readable type, absence of horizontal page overflow, screen-sized graph labels, marker focus, native fullscreen, the in-window fallback, layout switching, state preservation and focus restoration. No additional dependencies are required for these refinements.

@@ -1,5 +1,5 @@
-import React,{useReducer,useState,useRef,useMemo,lazy,Suspense} from 'react';
-import {ArrowRight,ArrowLeft,Plus,RotateCcw,Focus,Network,BookOpen,Search} from 'lucide-react';
+import React,{useReducer,useState,useRef,useMemo,useEffect,lazy,Suspense} from 'react';
+import {ArrowRight,ArrowLeft,Plus,RotateCcw,Focus,Network,BookOpen,Search,Maximize2,Minimize2} from 'lucide-react';
 import {graph,neighbours,topicDescription} from './model';
 import {initialExploration,explorationReducer} from './state';
 import {layouts,calculateLayout,groupOf,groups} from './layouts';
@@ -13,6 +13,8 @@ export default function ConceptGraph({active,startId,onTopic,onOverview,renderRe
  const [state,dispatch]=useReducer(explorationReducer,startId==='phys1202'?'electric-field':startId,initialExploration);
  const [layoutId,setLayoutId]=useState('force2');const layout=layouts.find(l=>l.id===layoutId);
  const [edgeId,setEdgeId]=useState(null);const [hierarchy,setHierarchy]=useState(true);const [conceptual,setConceptual]=useState(true);
+ const shell=useRef();const fullscreenOpener=useRef();const [fullscreenMode,setFullscreenMode]=useState('none');
+ const isFullscreen=fullscreenMode!=='none';
  const [command,setCommand]=useState(null);const [query,setQuery]=useState('');
  const [notes,setNotes]=useState(()=>{try{return JSON.parse(localStorage.getItem('atlas-layout-notes')||'{}')}catch{return {}}});
  const cache=useRef({});const idsKey=state.visible.join('|');const centreKey=layout.kind==='radial'?state.selected:'';
@@ -20,6 +22,21 @@ export default function ConceptGraph({active,startId,onTopic,onOverview,renderRe
  const selected=graph.nodes[state.selected];const relations=neighbours(state.selected);
  const edges=useMemo(()=>{const allowed=new Set(state.visible);return graph.edges.filter(e=>allowed.has(e.source)&&allowed.has(e.target)&&(e.type==='hierarchical'?hierarchy:conceptual))},[idsKey,hierarchy,conceptual]);
  const selectedEdge=edges.find(e=>e.id===edgeId);
+ useEffect(()=>{
+  const sync=()=>{if(document.fullscreenElement===shell.current)setFullscreenMode('native');else setFullscreenMode(mode=>mode==='native'?'none':mode)};
+  const escape=e=>{if(e.key==='Escape'&&fullscreenMode==='window')setFullscreenMode('none')};
+  document.addEventListener('fullscreenchange',sync);document.addEventListener('keydown',escape);
+  return()=>{document.removeEventListener('fullscreenchange',sync);document.removeEventListener('keydown',escape)};
+ },[fullscreenMode]);
+ useEffect(()=>{if(!isFullscreen){fullscreenOpener.current?.focus();return}const previousOverflow=document.body.style.overflow;document.body.style.overflow='hidden';const previousFocus=document.activeElement;requestAnimationFrame(()=>shell.current?.querySelector('.fullscreen-exit')?.focus());return()=>{document.body.style.overflow=previousOverflow;previousFocus?.focus()}},[isFullscreen]);
+ async function enterFullscreen(){fullscreenOpener.current=document.activeElement;try{if(shell.current.requestFullscreen){await shell.current.requestFullscreen();setFullscreenMode('native')}else setFullscreenMode('window')}catch{setFullscreenMode('window')}}
+ async function exitFullscreen(){if(document.fullscreenElement===shell.current)await document.exitFullscreen();setFullscreenMode('none')}
+ function trapFullscreenFocus(event){
+  if(!isFullscreen||event.key!=='Tab')return;
+  const controls=[...shell.current.querySelectorAll('button,input,select,textarea,[tabindex="0"]')].filter(el=>!el.disabled&&el.getClientRects().length);
+  const first=controls[0],last=controls.at(-1);
+  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}
+ }
  function send(type,extra={}){setCommand({type,...extra,stamp:performance.now()})}
  function select(id){dispatch({type:'select',id});setEdgeId(null);setQuery('')}
  function reset(id){cache.current={};dispatch({type:'reset',id});setEdgeId(null);send('reset')}
@@ -30,7 +47,9 @@ export default function ConceptGraph({active,startId,onTopic,onOverview,renderRe
  <section className="layout-lab" aria-label="Visualization laboratory"><div className="layout-selector"><label htmlFor="layout-select">YOUR PERSPECTIVE</label><select id="layout-select" value={layoutId} onChange={e=>switchLayout(e.target.value)}><optgroup label="Two-dimensional">{layouts.filter(l=>l.dimension===2).map(l=><option value={l.id} key={l.id}>{l.name}</option>)}</optgroup><optgroup label="Three-dimensional">{layouts.filter(l=>l.dimension===3).map(l=><option value={l.id} key={l.id}>{l.name}</option>)}</optgroup></select><div className="layout-tabs" aria-label="Quick visualization switch">{layouts.map((l,i)=><button key={l.id} title={l.name} aria-label={l.name} aria-pressed={l.id===layoutId} onClick={()=>switchLayout(l.id)}><span>{l.dimension}D</span>{l.short}</button>)}</div></div><div className="layout-hypothesis"><span className="eyebrow">A DESIGN HYPOTHESIS, NOT A VERDICT</span><h2>{layout.emphasis}</h2><p>{layout.description}</p><details><summary>Your observations · stored on this device</summary><textarea aria-label={`Observations for ${layout.name}`} value={notes[layoutId]||''} placeholder="What becomes clearer? What gets in the way?" onChange={e=>{const next={...notes,[layoutId]:e.target.value};setNotes(next);try{localStorage.setItem('atlas-layout-notes',JSON.stringify(next))}catch{}}}/></details></div></section>
  <div className="explore-trails" aria-label="Starting points"><span>TRY A THREAD</span>{[['electric-field','Charges & energy'],['current','Currents & magnetism'],['ideal-gas','Heat & work']].map(([id,label])=><button key={id} onClick={()=>reset(id)}>{label}<ArrowRight size={12}/></button>)}</div>
  <div className="lab-navigation"><div className="scope-switch" aria-label="Exploration scope"><button aria-pressed={state.scope==='focused'} onClick={()=>{dispatch({type:'focus'});send('fit')}}>Focused mode</button><button aria-pressed={state.scope==='overview'} onClick={()=>{dispatch({type:'overview'});send('fit')}}>Overview mode</button></div><div className="lab-search"><Search size={14}/><input type="search" aria-label="Search this network" placeholder="Find an idea in the graph…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape')setQuery('');if(e.key==='Enter'&&results.length)select(results[0].id)}}/>{query&&<div className="lab-results" aria-label="Graph search results">{results.map(n=><button key={n.id} onClick={()=>select(n.id)}>{n.title}<ArrowRight size={13}/></button>)}{!results.length&&<p>No concepts found.</p>}</div>}</div></div>
- <div className="explore-layout"><div className="graph-shell"><div className="graph-toolbar"><span><Network size={15}/><b>{state.visible.length}</b> of {Object.keys(graph.nodes).length} ideas revealed</span><button onClick={()=>reset()}><RotateCcw size={14}/>Reset</button></div>
+ <div className="explore-layout"><div ref={shell} role={isFullscreen?'dialog':undefined} aria-modal={isFullscreen||undefined} aria-label={isFullscreen?'Fullscreen concept explorer':undefined} onKeyDown={trapFullscreenFocus} className={`graph-shell ${isFullscreen?'is-fullscreen':''}`}>
+ {isFullscreen&&<div className="fullscreen-toolbar" aria-label="Fullscreen graph toolbar"><label>Visualization<select aria-label="Fullscreen visualization" value={layoutId} onChange={e=>switchLayout(e.target.value)}>{layouts.map(l=><option value={l.id} key={l.id}>{l.name}</option>)}</select></label><span className="fullscreen-selected">{selected.title}</span><div className="fullscreen-toolbar-actions"><button onClick={()=>reset()}><RotateCcw size={16}/>Reset</button><button onClick={()=>send('fit')}>Fit view</button><button onClick={()=>dispatch({type:'expand'})} disabled={state.visible.length===Object.keys(graph.nodes).length}>Reveal layer</button><button className="fullscreen-exit" onClick={exitFullscreen}><Minimize2 size={17}/>Exit fullscreen</button></div></div>}
+ <div className="graph-toolbar"><span><Network size={15}/><b>{state.visible.length}</b> of {Object.keys(graph.nodes).length} ideas revealed</span><div className="graph-toolbar-actions"><button onClick={()=>reset()}><RotateCcw size={14}/>Reset</button><button onClick={enterFullscreen}><Maximize2 size={16}/>Fullscreen</button></div></div>
  {layout.dimension===3?<Suspense fallback={<div className="spatial-loading" role="status">Loading the 3D laboratory…</div>}><Graph3D {...viewProps} onFallback={()=>switchLayout('force2')}/></Suspense>:<Graph2D {...viewProps}/>}
  <div className="graph-legend"><label><input type="checkbox" checked={conceptual} onChange={e=>setConceptual(e.target.checked)}/><i/>Conceptual connections</label><label><input type="checkbox" checked={hierarchy} onChange={e=>setHierarchy(e.target.checked)}/><i className="hierarchy-line"/>Course hierarchy</label></div>
  <div className="graph-actions"><button onClick={()=>dispatch({type:'expand'})} disabled={state.visible.length===Object.keys(graph.nodes).length}><Plus size={15}/>Reveal another layer</button><button onClick={()=>{dispatch({type:'focus'});setEdgeId(null);send('fit')}}><Focus size={15}/>Focus & collapse</button><button disabled={state.history.length<2} onClick={()=>{dispatch({type:'back'});setEdgeId(null)}}><ArrowLeft size={15}/>Back</button></div>
